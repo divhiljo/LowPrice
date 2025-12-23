@@ -1,0 +1,69 @@
+1. Produits
+
+But : afficher des produits en promotion, filtrables par distributeur et localisation.
+
+Champs nécessaires :
+
+id
+
+nom
+
+description_courte
+
+prix_normal
+
+prix_promo
+
+pourcentage_reduction (calculable)
+
+image_principale
+
+distributeur_id
+
+pays_id
+
+ville_id
+
+date_debut_promo
+
+date_fin_promo
+
+actif (bool)
+
+Fonctions admin :
+
+CRUD complet
+
+assignation distributeur / pays / ville
+
+activation / désactivation
+
+tri par date / prix
+
+2. Distributeurs
+
+But : pages dédiées par enseigne.
+
+Champs nécessaires :
+
+id
+
+nom
+
+slug
+
+logo
+
+description
+
+pays_disponibles[]
+
+actif
+
+Fonctions admin :
+
+CRUD
+
+gestion des pages distributeur
+
+lien avec produits et flyers
