@@ -129,7 +129,7 @@ export function AdminPage({ language }: AdminPageProps) {
       stock: 'Stock',
       active: 'Actif',
       inactive: 'Inactif',
-      content: 'Contenu',
+      contentField: 'Contenu',
       type: 'Type',
       position: 'Position',
       metaTitle: 'Titre meta',
@@ -193,7 +193,7 @@ export function AdminPage({ language }: AdminPageProps) {
       stock: 'Stock',
       active: 'Active',
       inactive: 'Inactive',
-      content: 'Content',
+      contentField: 'Content',
       type: 'Type',
       position: 'Position',
       metaTitle: 'Meta Title',
@@ -301,19 +301,38 @@ export function AdminPage({ language }: AdminPageProps) {
 
     switch (type) {
       case 'product':
-        setProducts(products.filter(p => p.id !== id));
+        setProducts(prev => prev.filter(p => p.id !== id));
         break;
       case 'page':
-        setPages(pages.filter(p => p.id !== id));
+        setPages(prev => prev.filter(p => p.id !== id));
         break;
       case 'content':
-        setContentBlocks(contentBlocks.filter(c => c.id !== id));
+        setContentBlocks(prev => prev.filter(c => c.id !== id));
         break;
       case 'media':
-        setMediaFiles(mediaFiles.filter(m => m.id !== id));
+        setMediaFiles(prev => prev.filter(m => m.id !== id));
         break;
       case 'user':
-        setUsers(users.filter(u => u.id !== id));
+        setUsers(prev => prev.filter(u => u.id !== id));
+        break;
+      case 'country':
+        setLocations(prev => prev.filter(country => country.id !== id));
+        break;
+      case 'city':
+        setLocations(prev =>
+          prev.map(country => ({
+            ...country,
+            cities: country.cities.filter(city => city.id !== id),
+          }))
+        );
+        break;
+      case 'distributeur':
+        setDistributeurs((prev: any) => {
+          if (!prev || typeof prev !== 'object') return prev;
+          // id is the distributeur slug
+          const { [id]: _removed, ...rest } = prev;
+          return rest;
+        });
         break;
       default:
         console.log('Delete', type, id);
@@ -877,7 +896,7 @@ export function AdminPage({ language }: AdminPageProps) {
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-gray-900 text-2xl font-semibold">{t.distributeurs}</h2>
                 <button
-                  onClick={handleAdd}
+                  onClick={() => handleAdd('distributeur')}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -891,7 +910,7 @@ export function AdminPage({ language }: AdminPageProps) {
                     <p className="text-gray-500 text-sm mb-4 font-mono">{slug}</p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleEdit({ type: 'distributeur', slug, ...data })}
+                        onClick={() => handleEdit({ slug, ...data }, 'distributeur')}
                         className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium"
                       >
                         <Edit className="w-4 h-4" />
@@ -917,7 +936,7 @@ export function AdminPage({ language }: AdminPageProps) {
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-gray-900 text-2xl font-semibold">{t.countries}</h2>
                 <button
-                  onClick={handleAdd}
+                  onClick={() => handleAdd('country')}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -931,7 +950,7 @@ export function AdminPage({ language }: AdminPageProps) {
                     <p className="text-gray-500 text-sm mb-4">{country.cities.length} {t.cities.toLowerCase()}</p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleEdit({ type: 'country', ...country })}
+                        onClick={() => handleEdit(country, 'country')}
                         className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium"
                       >
                         <Edit className="w-4 h-4" />
@@ -956,7 +975,7 @@ export function AdminPage({ language }: AdminPageProps) {
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-gray-900 text-2xl font-semibold">{t.cities}</h2>
                 <button
-                  onClick={handleAdd}
+                  onClick={() => handleAdd('city')}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -973,7 +992,7 @@ export function AdminPage({ language }: AdminPageProps) {
                           <h4 className="text-gray-900 mb-2 font-medium">{city.name}</h4>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleEdit({ type: 'city', countryId: country.id, ...city })}
+                              onClick={() => handleEdit({ countryId: country.id, ...city }, 'city')}
                               className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
                             >
                               <Edit className="w-4 h-4" />
@@ -1153,7 +1172,7 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
             />
           </div>
           <div>
-            <label className="block text-gray-700 mb-2 font-medium">{text.content}</label>
+            <label className="block text-gray-700 mb-2 font-medium">{text.contentField}</label>
             <textarea
               value={formData.content || ''}
               onChange={(e) => handleChange('content', e.target.value)}
@@ -1221,7 +1240,7 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
             </select>
           </div>
           <div>
-            <label className="block text-gray-700 mb-2 font-medium">{text.content}</label>
+            <label className="block text-gray-700 mb-2 font-medium">{text.contentField}</label>
             <textarea
               value={formData.content || ''}
               onChange={(e) => handleChange('content', e.target.value)}
