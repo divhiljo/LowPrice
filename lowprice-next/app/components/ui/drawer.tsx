@@ -1,40 +1,39 @@
 "use client";
 
 import * as React from "react";
-import { Drawer as DrawerPrimitive } from "vaul@1.1.2";
 
 import { cn } from "./utils";
 
 function Drawer({
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+}: React.ComponentProps<"div">) {
+  return <div data-slot="drawer" {...props} />;
 }
 
 function DrawerTrigger({
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {
-  return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />;
+}: React.ComponentProps<"button">) {
+  return <button data-slot="drawer-trigger" type="button" {...props} />;
 }
 
 function DrawerPortal({
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
-  return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />;
+}: React.ComponentProps<"div">) {
+  return <div data-slot="drawer-portal" {...props} />;
 }
 
 function DrawerClose({
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Close>) {
-  return <DrawerPrimitive.Close data-slot="drawer-close" {...props} />;
+}: React.ComponentProps<"button">) {
+  return <button data-slot="drawer-close" type="button" {...props} />;
 }
 
 function DrawerOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+}: React.ComponentProps<"div">) {
   return (
-    <DrawerPrimitive.Overlay
+    <div
       data-slot="drawer-overlay"
       className={cn(
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
@@ -49,11 +48,11 @@ function DrawerContent({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<"div">) {
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
-      <DrawerPrimitive.Content
+      <div
         data-slot="drawer-content"
         className={cn(
           "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
@@ -67,7 +66,7 @@ function DrawerContent({
       >
         <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
         {children}
-      </DrawerPrimitive.Content>
+      </div>
     </DrawerPortal>
   );
 }
@@ -95,9 +94,9 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
 function DrawerTitle({
   className,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Title>) {
+}: React.ComponentProps<"h2">) {
   return (
-    <DrawerPrimitive.Title
+    <h2
       data-slot="drawer-title"
       className={cn("text-foreground font-semibold", className)}
       {...props}
@@ -108,9 +107,9 @@ function DrawerTitle({
 function DrawerDescription({
   className,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Description>) {
+}: React.ComponentProps<"p">) {
   return (
-    <DrawerPrimitive.Description
+    <p
       data-slot="drawer-description"
       className={cn("text-muted-foreground text-sm", className)}
       {...props}

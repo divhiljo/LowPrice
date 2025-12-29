@@ -3,22 +3,13 @@
 import { X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { locationsData } from '../data/locations';
 
 interface LocationSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   language: 'FR' | 'EN';
 }
-
-const COUNTRIES = [
-  { code: 'CM', name: 'Cameroun', nameEN: 'Cameroon' },
-  { code: 'CI', name: 'Côte d\'Ivoire', nameEN: 'Ivory Coast' },
-  { code: 'DZ', name: 'Algérie', nameEN: 'Algeria' },
-  { code: 'BJ', name: 'Bénin', nameEN: 'Benin' },
-  { code: 'ZA', name: 'South Africa', nameEN: 'South Africa' },
-  { code: 'MA', name: 'Maroc', nameEN: 'Morocco' },
-  { code: 'CG', name: 'Congo', nameEN: 'Congo' },
-];
 
 const DOUALA_QUARTIERS = [
   'Akwa', 'Bonanjo', 'Deido', 'Bali', 'Bonapriso', 'Bonaberi', 
@@ -44,22 +35,31 @@ export function LocationSidebar({ isOpen, onClose, language }: LocationSidebarPr
 
   const handleApply = () => {
     if (selectedCountry) {
-      const countryName = COUNTRIES.find(c => c.code === selectedCountry)?.name.toLowerCase().replace(/\s+/g, '-');
-      if (selectedCity) {
-        navigate(`/catalogue/${countryName}/${selectedCity.toLowerCase()}`);
-      } else {
-        navigate(`/catalogue/${countryName}`);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'selected_location',
+          JSON.stringify({
+            country: selectedCountry,
+            city: selectedCity,
+            quartier: selectedQuartier,
+          })
+        );
       }
+      if (selectedCity) navigate(`/catalogue/${selectedCountry}/${selectedCity}`);
+      else navigate(`/catalogue/${selectedCountry}`);
       onClose();
     }
   };
 
-  const showCities = selectedCountry === 'CM';
-  const showQuartiers = selectedCity === 'Douala' || selectedCity === 'Yaounde';
+  const selectedCountryObj = locationsData.find((c) => c.id === selectedCountry);
+  const cities = selectedCountryObj?.cities || [];
+
+  const showCities = Boolean(selectedCountry);
+  const showQuartiers = selectedCity === 'douala' || selectedCity === 'yaounde';
   
   let quartiersList: string[] = [];
-  if (selectedCity === 'Douala') quartiersList = DOUALA_QUARTIERS;
-  if (selectedCity === 'Yaounde') quartiersList = YAOUNDE_QUARTIERS;
+  if (selectedCity === 'douala') quartiersList = DOUALA_QUARTIERS;
+  if (selectedCity === 'yaounde') quartiersList = YAOUNDE_QUARTIERS;
 
   return (
     <>
@@ -107,8 +107,8 @@ export function LocationSidebar({ isOpen, onClose, language }: LocationSidebarPr
                   <option value="">
                     {language === 'FR' ? 'Sélectionner un pays' : 'Select a country'}
                   </option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country.code} value={country.code}>
+                  {locationsData.map((country) => (
+                    <option key={country.id} value={country.id}>
                       {language === 'FR' ? country.name : country.nameEN}
                     </option>
                   ))}
@@ -117,7 +117,7 @@ export function LocationSidebar({ isOpen, onClose, language }: LocationSidebarPr
               </div>
             </div>
 
-            {/* Ville (uniquement pour Cameroun) */}
+            {/* Ville */}
             {showCities && (
               <div>
                 <label className="block mb-3 text-gray-900 text-sm">
@@ -128,12 +128,16 @@ export function LocationSidebar({ isOpen, onClose, language }: LocationSidebarPr
                     value={selectedCity}
                     onChange={(e) => setSelectedCity(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg appearance-none bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                    disabled={!selectedCountry}
                   >
                     <option value="">
                       {language === 'FR' ? 'Sélectionner une ville' : 'Select a city'}
                     </option>
-                    <option value="Douala">Douala</option>
-                    <option value="Yaounde">Yaoundé</option>
+                    {cities.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {language === 'FR' ? city.name : city.nameEN || city.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>

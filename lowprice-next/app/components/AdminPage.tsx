@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Lock, Plus, Trash2, Edit, X, Save, FileText, Store, Image, Package, Globe, MapPin, Layout, Upload, Eye, Settings, Users, BarChart3 } from 'lucide-react';
+import { Lock, Plus, Trash2, Edit, X, Save, FileText, Store, Image, Package, Globe, MapPin, Layout, Upload, Eye, Settings, Users, BarChart3, Star } from 'lucide-react';
 import { distributeursData } from '../data/distributeurs';
 import { locationsData, Country, City } from '../data/locations';
 
@@ -12,7 +12,7 @@ interface AdminPageProps {
 const ADMIN_EMAIL = 'admin@lowprice.cm';
 const ADMIN_PASSWORD = 'admin123';
 
-type AdminSection = 'dashboard' | 'distributeurs' | 'flyers' | 'products' | 'countries' | 'cities' | 'pages' | 'content' | 'media' | 'users' | 'analytics';
+type AdminSection = 'dashboard' | 'distributeurs' | 'boutiques' | 'flyers' | 'reviews' | 'products' | 'countries' | 'cities' | 'pages' | 'content' | 'media' | 'users' | 'analytics';
 
 interface Product {
   id: string;
@@ -69,6 +69,34 @@ interface User {
   createdAt: string;
 }
 
+type Boutique = {
+  id: string;
+  distributeurSlug: string;
+  quartier: string;
+  enseigne: string;
+};
+
+type Flyer = {
+  id: string;
+  boutiqueId: string;
+  title: string;
+  description?: string;
+  image: string;
+  startDate?: string;
+  endDate?: string;
+  status?: 'En cours' | 'Terminé';
+  createdAt: string;
+  updatedAt: string;
+};
+
+type Review = {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  isApproved?: boolean;
+};
+
 export function AdminPage({ language }: AdminPageProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
@@ -83,10 +111,37 @@ export function AdminPage({ language }: AdminPageProps) {
 
   // CMS Data States
   const [products, setProducts] = useState<Product[]>([]);
+  const [boutiques, setBoutiques] = useState<Boutique[]>([]);
+  const [flyers, setFlyers] = useState<Flyer[]>([]);
+  const [productReviews, setProductReviews] = useState<Record<string, Review[]>>({});
   const [pages, setPages] = useState<Page[]>([]);
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([]);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+
+  const STORAGE_KEYS = {
+    auth: 'admin_auth',
+    distributeurs: 'cms_distributeurs',
+    boutiques: 'cms_boutiques',
+    flyers: 'cms_flyers',
+    reviews: 'product_reviews',
+    products: 'cms_products',
+    pages: 'cms_pages',
+    contentBlocks: 'cms_content_blocks',
+    mediaFiles: 'cms_media_files',
+    users: 'cms_users',
+  } as const;
+
+  const slugify = (value: string) => {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[éèê]/g, 'e')
+      .replace(/[àâ]/g, 'a')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-');
+  };
 
   const text = {
     FR: {
@@ -224,19 +279,28 @@ export function AdminPage({ language }: AdminPageProps) {
   // Load data from localStorage on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const auth = localStorage.getItem('admin_auth');
+      const auth = localStorage.getItem(STORAGE_KEYS.auth);
       if (auth === 'true') {
         setIsAuthenticated(true);
       }
 
+      const savedDistributeurs = localStorage.getItem(STORAGE_KEYS.distributeurs);
+      if (savedDistributeurs) setDistributeurs(JSON.parse(savedDistributeurs));
+
       // Load CMS data
-      const savedProducts = localStorage.getItem('cms_products');
-      const savedPages = localStorage.getItem('cms_pages');
-      const savedContentBlocks = localStorage.getItem('cms_content_blocks');
-      const savedMediaFiles = localStorage.getItem('cms_media_files');
-      const savedUsers = localStorage.getItem('cms_users');
+      const savedProducts = localStorage.getItem(STORAGE_KEYS.products);
+      const savedBoutiques = localStorage.getItem(STORAGE_KEYS.boutiques);
+      const savedFlyers = localStorage.getItem(STORAGE_KEYS.flyers);
+      const savedReviews = localStorage.getItem(STORAGE_KEYS.reviews);
+      const savedPages = localStorage.getItem(STORAGE_KEYS.pages);
+      const savedContentBlocks = localStorage.getItem(STORAGE_KEYS.contentBlocks);
+      const savedMediaFiles = localStorage.getItem(STORAGE_KEYS.mediaFiles);
+      const savedUsers = localStorage.getItem(STORAGE_KEYS.users);
 
       if (savedProducts) setProducts(JSON.parse(savedProducts));
+      if (savedBoutiques) setBoutiques(JSON.parse(savedBoutiques));
+      if (savedFlyers) setFlyers(JSON.parse(savedFlyers));
+      if (savedReviews) setProductReviews(JSON.parse(savedReviews));
       if (savedPages) setPages(JSON.parse(savedPages));
       if (savedContentBlocks) setContentBlocks(JSON.parse(savedContentBlocks));
       if (savedMediaFiles) setMediaFiles(JSON.parse(savedMediaFiles));
@@ -247,31 +311,55 @@ export function AdminPage({ language }: AdminPageProps) {
   // Save data to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cms_products', JSON.stringify(products));
+      localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(products));
     }
   }, [products]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cms_pages', JSON.stringify(pages));
+      localStorage.setItem(STORAGE_KEYS.boutiques, JSON.stringify(boutiques));
+    }
+  }, [boutiques]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.flyers, JSON.stringify(flyers));
+    }
+  }, [flyers]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.reviews, JSON.stringify(productReviews));
+    }
+  }, [productReviews]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.distributeurs, JSON.stringify(distributeurs));
+    }
+  }, [distributeurs]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.pages, JSON.stringify(pages));
     }
   }, [pages]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cms_content_blocks', JSON.stringify(contentBlocks));
+      localStorage.setItem(STORAGE_KEYS.contentBlocks, JSON.stringify(contentBlocks));
     }
   }, [contentBlocks]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cms_media_files', JSON.stringify(mediaFiles));
+      localStorage.setItem(STORAGE_KEYS.mediaFiles, JSON.stringify(mediaFiles));
     }
   }, [mediaFiles]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cms_users', JSON.stringify(users));
+      localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
     }
   }, [users]);
 
@@ -280,7 +368,7 @@ export function AdminPage({ language }: AdminPageProps) {
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('admin_auth', 'true');
+        localStorage.setItem(STORAGE_KEYS.auth, 'true');
       }
     } else {
       alert(t.error);
@@ -290,7 +378,7 @@ export function AdminPage({ language }: AdminPageProps) {
   const handleLogout = () => {
     setIsAuthenticated(false);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_auth');
+      localStorage.removeItem(STORAGE_KEYS.auth);
     }
     setEmail('');
     setPassword('');
@@ -302,6 +390,14 @@ export function AdminPage({ language }: AdminPageProps) {
     switch (type) {
       case 'product':
         setProducts(prev => prev.filter(p => p.id !== id));
+        break;
+      case 'boutique':
+        setBoutiques(prev => prev.filter(b => b.id !== id));
+        setProducts(prev => prev.filter((p: any) => p.boutiqueId !== id));
+        setFlyers(prev => prev.filter(f => f.boutiqueId !== id));
+        break;
+      case 'flyer':
+        setFlyers(prev => prev.filter(f => f.id !== id));
         break;
       case 'page':
         setPages(prev => prev.filter(p => p.id !== id));
@@ -333,6 +429,7 @@ export function AdminPage({ language }: AdminPageProps) {
           const { [id]: _removed, ...rest } = prev;
           return rest;
         });
+        setBoutiques(prev => prev.filter(b => b.distributeurSlug !== id));
         break;
       default:
         console.log('Delete', type, id);
@@ -349,6 +446,48 @@ export function AdminPage({ language }: AdminPageProps) {
     setEditingItem(null);
     setModalType(type);
     setShowModal(true);
+  };
+
+  const toggleReviewApproval = (reviewKey: string, reviewId: string) => {
+    setProductReviews((prev) => {
+      const list = prev[reviewKey] || [];
+      return {
+        ...prev,
+        [reviewKey]: list.map((r) =>
+          r.id === reviewId ? { ...r, isApproved: !(r.isApproved ?? true) } : r
+        ),
+      };
+    });
+  };
+
+  const deleteReview = (reviewKey: string, reviewId: string) => {
+    if (!confirm(t.confirmDelete)) return;
+    setProductReviews((prev) => {
+      const list = prev[reviewKey] || [];
+      const nextList = list.filter((r) => r.id !== reviewId);
+      const next = { ...prev };
+      if (nextList.length === 0) {
+        delete next[reviewKey];
+      } else {
+        next[reviewKey] = nextList;
+      }
+      return next;
+    });
+  };
+
+  const getBoutiqueLabel = (boutiqueId: string) => {
+    const b = boutiques.find((x) => x.id === boutiqueId);
+    if (!b) return boutiqueId;
+    return `${b.enseigne} • ${b.quartier}`;
+  };
+
+  const parseReviewKey = (key: string) => {
+    const parts = key.split('::');
+    return {
+      distributeurSlug: parts[0] || '',
+      boutiqueId: parts[1] || '',
+      productId: parts[2] || '',
+    };
   };
 
   const handleSave = (data: any, type: string) => {
@@ -368,6 +507,55 @@ export function AdminPage({ language }: AdminPageProps) {
           setProducts([...products, newProduct]);
         }
         break;
+      case 'boutique':
+        if (editingItem) {
+          setBoutiques(boutiques.map(b => b.id === editingItem.id ? { ...editingItem, ...data } : b));
+        } else {
+          const distributeurSlug = String(data.distributeurSlug || '').trim();
+          const enseigne = String(data.enseigne || '').trim();
+          const quartiersRaw = String(data.quartiers || data.quartier || '').trim();
+          const quartiers = quartiersRaw
+            ? quartiersRaw.split(',').map((q: string) => q.trim()).filter(Boolean)
+            : [];
+          const toCreate = quartiers.length > 0 ? quartiers : [String(data.quartier || '').trim()].filter(Boolean);
+          const created = toCreate.map((quartier: string, idx: number) => {
+            const base = `${distributeurSlug}__${slugify(quartier)}__${slugify(enseigne)}`;
+            return {
+              id: `${base}__${Date.now()}__${idx}`,
+              distributeurSlug,
+              quartier,
+              enseigne,
+            } as Boutique;
+          });
+          setBoutiques([...boutiques, ...created]);
+        }
+        break;
+      case 'flyer':
+        if (editingItem) {
+          setFlyers(flyers.map(f => f.id === editingItem.id ? { ...data, updatedAt: now } : f));
+        } else {
+          const newFlyer: Flyer = {
+            ...data,
+            id: Date.now().toString(),
+            createdAt: now,
+            updatedAt: now,
+          };
+          setFlyers([...flyers, newFlyer]);
+        }
+        break;
+      case 'distributeur': {
+        const nextSlug = String(data.slug || data.id || '').trim() || slugify(String(data.name || ''));
+        if (!nextSlug) break;
+        setDistributeurs((prev: any) => ({
+          ...(prev || {}),
+          [nextSlug]: {
+            ...(prev?.[nextSlug] || {}),
+            ...data,
+            name: data.name || prev?.[nextSlug]?.name,
+          },
+        }));
+        break;
+      }
       case 'page':
         if (editingItem) {
           setPages(pages.map(p => p.id === editingItem.id ? { ...data, updatedAt: now } : p));
@@ -468,7 +656,10 @@ export function AdminPage({ language }: AdminPageProps) {
   const sidebarItems = [
     { id: 'dashboard' as AdminSection, label: t.dashboard, icon: BarChart3 },
     { id: 'distributeurs' as AdminSection, label: t.distributeurs, icon: Store },
+    { id: 'boutiques' as AdminSection, label: language === 'FR' ? 'Boutiques' : 'Shops', icon: Store },
     { id: 'products' as AdminSection, label: t.products, icon: Package },
+    { id: 'flyers' as AdminSection, label: t.flyers, icon: Image },
+    { id: 'reviews' as AdminSection, label: language === 'FR' ? 'Avis' : 'Reviews', icon: Star },
     { id: 'pages' as AdminSection, label: t.pages, icon: Layout },
     { id: 'content' as AdminSection, label: t.content, icon: FileText },
     { id: 'media' as AdminSection, label: t.media, icon: Upload },
@@ -597,6 +788,56 @@ export function AdminPage({ language }: AdminPageProps) {
             </div>
           )}
 
+          {activeSection === 'boutiques' && (
+            <div>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-gray-900 text-2xl font-semibold">{language === 'FR' ? 'Boutiques' : 'Shops'}</h2>
+                <button
+                  onClick={() => handleAdd('boutique')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t.add}
+                </button>
+              </div>
+
+              {boutiques.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <p className="text-gray-500">{t.noData}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {boutiques
+                    .slice()
+                    .sort((a, b) => `${a.distributeurSlug}-${a.quartier}-${a.enseigne}`.localeCompare(`${b.distributeurSlug}-${b.quartier}-${b.enseigne}`))
+                    .map((b) => (
+                      <div key={b.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <h3 className="text-gray-900 mb-1 font-semibold">{b.enseigne}</h3>
+                        <p className="text-gray-500 text-sm mb-1">{b.quartier}</p>
+                        <p className="text-gray-500 text-xs font-mono mb-4">{b.distributeurSlug}</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(b, 'boutique')}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium"
+                          >
+                            <Edit className="w-4 h-4" />
+                            {t.edit}
+                          </button>
+                          <button
+                            onClick={() => handleDelete('boutique', b.id)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm font-medium"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {t.delete}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Products Section */}
           {activeSection === 'products' && (
             <div>
@@ -622,6 +863,9 @@ export function AdminPage({ language }: AdminPageProps) {
                         <img src={product.image} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-4" />
                       )}
                       <h3 className="text-gray-900 mb-2 font-semibold">{product.name}</h3>
+                      {(product as any).boutiqueId && (
+                        <p className="text-gray-500 text-sm mb-2">{getBoutiqueLabel((product as any).boutiqueId)}</p>
+                      )}
                       <p className="text-gray-600 text-sm mb-2">{product.description}</p>
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-gray-900 font-semibold">{product.price}€</span>
@@ -629,6 +873,18 @@ export function AdminPage({ language }: AdminPageProps) {
                           {product.isActive ? t.active : t.inactive}
                         </span>
                       </div>
+                      {typeof (product as any).discount === 'number' && (
+                        <p className="text-gray-500 text-sm mb-4">{t.discount}: {(product as any).discount}%</p>
+                      )}
+                      {Array.isArray((product as any).tags) && (product as any).tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {(product as any).tags.slice(0, 6).map((tag: string, idx: number) => (
+                            <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEdit(product, 'product')}
@@ -647,6 +903,139 @@ export function AdminPage({ language }: AdminPageProps) {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSection === 'flyers' && (
+            <div>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-gray-900 text-2xl font-semibold">{t.flyers}</h2>
+                <button
+                  onClick={() => handleAdd('flyer')}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t.add}
+                </button>
+              </div>
+
+              {flyers.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <p className="text-gray-500">{t.noData}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {flyers
+                    .slice()
+                    .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
+                    .map((flyer) => (
+                      <div key={flyer.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <h3 className="text-gray-900 font-semibold">{flyer.title}</h3>
+                          {flyer.status && (
+                            <span className={`px-2 py-1 rounded text-xs ${flyer.status === 'Terminé' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-600'}`}>
+                              {flyer.status}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-500 text-sm mb-2">{getBoutiqueLabel(flyer.boutiqueId)}</p>
+                        {flyer.description && (
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{flyer.description}</p>
+                        )}
+                        {(flyer.startDate || flyer.endDate) && (
+                          <p className="text-gray-500 text-sm mb-4">
+                            {t.period}: {[flyer.startDate, flyer.endDate].filter(Boolean).join(' - ')}
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(flyer, 'flyer')}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium"
+                          >
+                            <Edit className="w-4 h-4" />
+                            {t.edit}
+                          </button>
+                          <button
+                            onClick={() => handleDelete('flyer', flyer.id)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm font-medium"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {t.delete}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeSection === 'reviews' && (
+            <div>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-gray-900 text-2xl font-semibold">{language === 'FR' ? 'Avis produits' : 'Product reviews'}</h2>
+              </div>
+
+              {Object.keys(productReviews).length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <p className="text-gray-500">{t.noData}</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(productReviews)
+                    .slice()
+                    .sort((a, b) => (b[1]?.[0]?.createdAt || '').localeCompare(a[1]?.[0]?.createdAt || ''))
+                    .map(([key, reviews]) => {
+                      const meta = parseReviewKey(key);
+                      return (
+                        <div key={key} className="bg-white border border-gray-200 rounded-lg p-6">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                            <div>
+                              <h3 className="text-gray-900 font-semibold">{meta.distributeurSlug}</h3>
+                              <p className="text-gray-500 text-sm">{getBoutiqueLabel(meta.boutiqueId)} • {meta.productId}</p>
+                            </div>
+                            <span className="text-sm text-gray-500">{reviews.length} {language === 'FR' ? 'avis' : 'reviews'}</span>
+                          </div>
+
+                          <div className="space-y-3">
+                            {reviews.map((r) => {
+                              const approved = r.isApproved ?? true;
+                              return (
+                                <div key={r.id} className="border border-gray-100 rounded-lg p-4">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                      <div className="flex items-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                          <Star key={i} className={`w-4 h-4 ${i <= r.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                                        ))}
+                                      </div>
+                                      <p className="text-gray-700 text-sm mt-2">{r.comment}</p>
+                                      <p className="text-gray-500 text-xs mt-2">{new Date(r.createdAt).toLocaleDateString(language === 'FR' ? 'fr-FR' : 'en-US')}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                      <button
+                                        onClick={() => toggleReviewApproval(key, r.id)}
+                                        className={`text-xs px-2 py-1 rounded ${approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                                      >
+                                        {approved ? (language === 'FR' ? 'Approuvé' : 'Approved') : (language === 'FR' ? 'En attente' : 'Pending')}
+                                      </button>
+                                      <button
+                                        onClick={() => deleteReview(key, r.id)}
+                                        className="text-xs px-2 py-1 rounded bg-red-100 text-red-700"
+                                      >
+                                        {t.delete}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -1024,7 +1413,11 @@ export function AdminPage({ language }: AdminPageProps) {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-gray-900 text-lg font-semibold">
-                  {editingItem ? t.edit : t.add} {modalType === 'product' ? t.products.toLowerCase().slice(0, -1) :
+                  {editingItem ? t.edit : t.add}{' '}
+                  {modalType === 'product' ? t.products.toLowerCase().slice(0, -1) :
+                    modalType === 'flyer' ? t.flyers.toLowerCase().slice(0, -1) :
+                    modalType === 'boutique' ? (language === 'FR' ? 'boutique' : 'shop') :
+                    modalType === 'distributeur' ? t.distributeurs.toLowerCase().slice(0, -1) :
                     modalType === 'page' ? t.pages.toLowerCase().slice(0, -1) :
                     modalType === 'content' ? t.content.toLowerCase() :
                     modalType === 'media' ? t.media.toLowerCase() :
@@ -1045,6 +1438,8 @@ export function AdminPage({ language }: AdminPageProps) {
                 onCancel={() => setShowModal(false)}
                 language={language}
                 text={t}
+                boutiques={boutiques}
+                distributeurs={distributeurs}
               />
             </div>
           </div>
@@ -1055,7 +1450,7 @@ export function AdminPage({ language }: AdminPageProps) {
 }
 
 // Modal Form Component
-function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
+function ModalForm({ type, item, onSave, onCancel, language, text, boutiques, distributeurs }: any) {
   const [formData, setFormData] = useState<any>(item || {});
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1069,8 +1464,172 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {type === 'distributeur' && (
+        <>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.name}</label>
+            <input
+              type="text"
+              value={formData.name || ''}
+              onChange={(e) => handleChange('name', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.slug}</label>
+            <input
+              type="text"
+              value={formData.slug || ''}
+              onChange={(e) => handleChange('slug', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              placeholder={language === 'FR' ? 'optionnel (auto si vide)' : 'optional (auto if empty)'}
+            />
+          </div>
+        </>
+      )}
+
+      {type === 'boutique' && (
+        <>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Distributeur' : 'Retailer'}</label>
+            <select
+              value={formData.distributeurSlug || ''}
+              onChange={(e) => handleChange('distributeurSlug', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            >
+              <option value="">{language === 'FR' ? 'Sélectionner' : 'Select'}</option>
+              {Object.keys(distributeurs || {}).map((slug: string) => (
+                <option key={slug} value={slug}>
+                  {slug}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Enseigne' : 'Brand'}</label>
+            <input
+              type="text"
+              value={formData.enseigne || ''}
+              onChange={(e) => handleChange('enseigne', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Quartier(s)' : 'Neighborhood(s)'}</label>
+            <input
+              type="text"
+              value={formData.quartiers || formData.quartier || ''}
+              onChange={(e) => handleChange('quartiers', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              placeholder={language === 'FR' ? 'Ex: Akwa, Bonanjo, Deido' : 'e.g. Akwa, Bonanjo, Deido'}
+              required
+            />
+          </div>
+        </>
+      )}
+
+      {type === 'flyer' && (
+        <>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Boutique' : 'Shop'}</label>
+            <select
+              value={formData.boutiqueId || ''}
+              onChange={(e) => handleChange('boutiqueId', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            >
+              <option value="">{language === 'FR' ? 'Sélectionner' : 'Select'}</option>
+              {(boutiques || []).map((b: any) => (
+                <option key={b.id} value={b.id}>
+                  {b.enseigne} • {b.quartier}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.title_field}</label>
+            <input
+              type="text"
+              value={formData.title || ''}
+              onChange={(e) => handleChange('title', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.description}</label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => handleChange('description', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              rows={3}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.image} (URL)</label>
+            <input
+              type="url"
+              value={formData.image || ''}
+              onChange={(e) => handleChange('image', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Début' : 'Start'}</label>
+              <input
+                type="date"
+                value={formData.startDate || ''}
+                onChange={(e) => handleChange('startDate', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Fin' : 'End'}</label>
+              <input
+                type="date"
+                value={formData.endDate || ''}
+                onChange={(e) => handleChange('endDate', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Statut' : 'Status'}</label>
+            <select
+              value={formData.status || 'En cours'}
+              onChange={(e) => handleChange('status', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+            >
+              <option value="En cours">En cours</option>
+              <option value="Terminé">Terminé</option>
+            </select>
+          </div>
+        </>
+      )}
+
       {type === 'product' && (
         <>
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Boutique' : 'Shop'}</label>
+            <select
+              value={(formData as any).boutiqueId || ''}
+              onChange={(e) => handleChange('boutiqueId', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              required
+            >
+              <option value="">{language === 'FR' ? 'Sélectionner' : 'Select'}</option>
+              {(boutiques || []).map((b: any) => (
+                <option key={b.id} value={b.id}>
+                  {b.enseigne} • {b.quartier}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-gray-700 mb-2 font-medium">{text.name}</label>
             <input
@@ -1104,6 +1663,38 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
               />
             </div>
             <div>
+              <label className="block text-gray-700 mb-2 font-medium">{text.discount}</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={(formData as any).discount ?? 0}
+                onChange={(e) => handleChange('discount', parseFloat(e.target.value))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{language === 'FR' ? 'Étiquettes (séparées par ,)' : 'Tags (comma separated)'}</label>
+            <input
+              type="text"
+              value={Array.isArray((formData as any).tags) ? (formData as any).tags.join(', ') : (formData as any).tags || ''}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const parsed = raw
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                handleChange('tags', parsed);
+              }}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              placeholder={language === 'FR' ? 'Ex: bio, promo, fruits' : 'e.g. organic, promo, fruits'}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-gray-700 mb-2 font-medium">{text.category}</label>
               <input
                 type="text"
@@ -1113,8 +1704,6 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
                 required
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700 mb-2 font-medium">{text.stock}</label>
               <input
@@ -1125,18 +1714,20 @@ function ModalForm({ type, item, onSave, onCancel, language, text }: any) {
                 required
               />
             </div>
-            <div>
-              <label className="block text-gray-700 mb-2 font-medium">{text.active}</label>
-              <select
-                value={formData.isActive ? 'true' : 'false'}
-                onChange={(e) => handleChange('isActive', e.target.value === 'true')}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
-              >
-                <option value="true">{text.active}</option>
-                <option value="false">{text.inactive}</option>
-              </select>
-            </div>
           </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2 font-medium">{text.active}</label>
+            <select
+              value={formData.isActive ? 'true' : 'false'}
+              onChange={(e) => handleChange('isActive', e.target.value === 'true')}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+            >
+              <option value="true">{text.active}</option>
+              <option value="false">{text.inactive}</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-gray-700 mb-2 font-medium">{text.image} (URL)</label>
             <input

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import * as RechartsPrimitive from "recharts@2.15.2";
 
 import { cn } from "./utils";
 
@@ -42,9 +41,7 @@ function ChartContainer({
   ...props
 }: React.ComponentProps<"div"> & {
   config: ChartConfig;
-  children: React.ComponentProps<
-    typeof RechartsPrimitive.ResponsiveContainer
-  >["children"];
+  children: React.ReactNode;
 }) {
   const uniqueId = React.useId();
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
@@ -61,9 +58,7 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>
-          {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        {children}
       </div>
     </ChartContext.Provider>
   );
@@ -102,7 +97,7 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+const ChartTooltip = ((props: unknown) => null) as unknown;
 
 function ChartTooltipContent({
   active,
@@ -118,14 +113,21 @@ function ChartTooltipContent({
   color,
   nameKey,
   labelKey,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-  React.ComponentProps<"div"> & {
-    hideLabel?: boolean;
-    hideIndicator?: boolean;
-    indicator?: "line" | "dot" | "dashed";
-    nameKey?: string;
-    labelKey?: string;
-  }) {
+}: {
+  active?: boolean;
+  payload?: any[];
+  className?: string;
+  indicator?: "line" | "dot" | "dashed";
+  hideLabel?: boolean;
+  hideIndicator?: boolean;
+  label?: any;
+  labelFormatter?: (value: any, payload: any) => React.ReactNode;
+  labelClassName?: string;
+  formatter?: (value: any, name: any, item: any, index: number, payload: any) => React.ReactNode;
+  color?: string;
+  nameKey?: string;
+  labelKey?: string;
+} & React.ComponentProps<"div">) {
   const { config } = useChart();
 
   const tooltipLabel = React.useMemo(() => {
@@ -248,7 +250,7 @@ function ChartTooltipContent({
   );
 }
 
-const ChartLegend = RechartsPrimitive.Legend;
+const ChartLegend = ((props: unknown) => null) as unknown;
 
 function ChartLegendContent({
   className,
@@ -257,7 +259,9 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
-  Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+  {
+    payload?: any[];
+    verticalAlign?: "top" | "bottom";
     hideIcon?: boolean;
     nameKey?: string;
   }) {
